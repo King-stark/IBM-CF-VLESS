@@ -1,110 +1,107 @@
-#
-# https://github.com/P3TERX/IBM-CF-V2
-#
-# Copyright (c) 2020 P3TERX <https://p3terx.com>
-#
-# This is free software, licensed under the MIT License.
-# See /LICENSE for more information.
-#
+＃
+＃https ://github.com/P3TERX/IBM-CF-V2
+＃
+＃版权（c）2020 P3TERX <https://p3terx.com>
+＃
+＃这是免费的软件，根据MIT许可获得许可。
+＃有关更多信息，请参见/ LICENSE。
+＃
 
-name: IBM Cloud Foundry - V2Ray
+名称：IBM Cloud Foundry-V2Ray
 
-env:
-  IBM_CF_API: https://api.us-south.cf.cloud.ibm.com
-  IBM_CF_APP_MEM: 256M
+env：
+  IBM_CF_API：https : //api.us-south.cf.cloud.ibm.com
+  IBM_CF_APP_MEM：256M
 
-on:
-  workflow_dispatch:
-  repository_dispatch:
-  schedule:
-    - cron: 0 21 * * 5
+在：
+  workflow_dispatch：
+  repository_dispatch：
+  时间表：
+    - 的cron：0 21 * * 5
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    env:
-      IBM_CF_USERNAME: ${{ secrets.IBM_CF_USERNAME }}
-      IBM_CF_PASSWORD: ${{ secrets.IBM_CF_PASSWORD }}
-      IBM_CF_ORG_NAME: ${{ secrets.IBM_CF_ORG_NAME }}
-      IBM_CF_SPACE_NAME: ${{ secrets.IBM_CF_SPACE_NAME }}
-      IBM_CF_APP_NAME: ${{ secrets.IBM_CF_APP_NAME }}
-      V2_UUID: ${{ secrets.V2_UUID }}
-      V2_WS_PATH: ${{ secrets.V2_WS_PATH }}
+职位：
+  部署：
+    运行：ubuntu-latest
+    超时分钟：5
+    env：
+      IBM_CF_USERNAME：$ {{ secrets.IBM_CF_USERNAME }}
+      IBM_CF_PASSWORD：$ {{ secrets.IBM_CF_PASSWORD }}
+      IBM_CF_ORG_NAME：$ {{ secrets.IBM_CF_ORG_NAME }}
+      IBM_CF_SPACE_NAME：$ {{ secrets.IBM_CF_SPACE_NAME }}
+      IBM_CF_APP_NAME：$ {{ secrets.IBM_CF_APP_NAME }}
+      V2_UUID：$ {{ secrets.V2_UUID }}
+      V2_WS_PATH：$ {{ secrets.V2_WS_PATH }}
 
-    steps:
+    步骤：
 
-    - name: Install Cloud Foundry CLI
-      run: |
-        sudo rm -rf /etc/apt/sources.list.d/*
-        wget -qO- https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
-        echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
-        sudo apt-get update
-        sudo apt-get install cf-cli
-
-    - name: Login to IBM Cloud Foundry
-      run: |
-        cf api "${IBM_CF_API}"
-        cf auth "${IBM_CF_USERNAME}" "${IBM_CF_PASSWORD}"
-        cf target -o "${IBM_CF_ORG_NAME}" -s "${IBM_CF_SPACE_NAME}"
-
-    - name: Download Latest V2Ray
-      run: |
-        DOWNLOAD_URL="https://github.com/v2fly/v2ray-core/releases/latest/download/v2ray-linux-64.zip"
-        curl -fsSL "$DOWNLOAD_URL" -o "latest-v2ray.zip"
-        unzip latest-v2ray.zip v2ray v2ctl geoip.dat geosite.dat
-        rm latest-v2ray.zip
-        chmod -v 755 v2*
-
-    - name: Generate V2Ray Config File
-      run: |
-        cat > config.json << EOF
+    - 名称：安装Cloud Foundry CLI
+      运行：|
+        curl -fsSL“ https://packages.cloudfoundry.org/stable?release=linux64-binary&source=github&version=v6” | 焦油-zxC / tmp
+        须藤MV / tmp / cf / usr / local / bin
+        cf版本
+    - 名称：登录到IBM Cloud Foundry
+      运行：|
+        cf登录\
+          -a“ $ {IBM_CF_API}” \
+          -u“ $ {IBM_CF_USERNAME}” \
+          -p“ $ {IBM_CF_PASSWORD}” \
+          -o“ $ {IBM_CF_ORG_NAME：-$ IBM_CF_USERNAME}” \
+          -s“ $ {IBM_CF_SPACE_NAME：-dev}”
+    - 名称：下载最新的V2Ray
+      运行：|
+        DOWNLOAD_URL =“ https://github.com/v2fly/v2ray-core/releases/latest/download/v2ray-linux-64.zip”
+        curl -fsSL“ $ DOWNLOAD_URL” -o“ latest-v2ray.zip”
+        解压缩Latest-v2ray.zip v2ray v2ctl geoip.dat geosite.dat
+        rm Latest-v2ray.zip
+        chmod -v 755 v2 *
+        ./v2ray-版本
+    - 名称：生成V2Ray配置文件
+      运行：|
+        base64>配置<< EOF
         {
-          "log": {
-            "access": "none"
-          },
-          "inbounds": [
+          “日志”：{
+            “访问”：“无”
+          }，
+          “入站”：[
             {
-              "port": 8080,
-              "protocol": "vless",
-              "settings": {
-                "decryption": "none",
-                "clients": [
+              “端口”：8080，
+              “ protocol”：“ vless”，
+              “设置”：{
+                “ decryption”：“ none”，
+                “客户”：[
                   {
-                    "id": "${V2_UUID}"
+                    “ id”：“ $ {V2_UUID}”
                   }
                 ]
-              },
-              "streamSettings": {
-                "network":"ws",
-                "wsSettings": {
-                  "path": "${V2_WS_PATH}"
+              }，
+              “ streamSettings”：{
+                “ network”：“ ws”，
+                “ wsSettings”：{
+                  “路径”：“ $ {V2_WS_PATH}”
                 }
               }
             }
-          ],
-          "outbounds": [
+          ]，
+          “出站”：[
             {
-              "protocol": "freedom",
-              "settings": {}
+              “ protocol”：“自由”，
+              “设置”：{}
             }
           ]
         }
-        EOF
-
-    - name: Generate Manifest File
-      run: |
-        cat > manifest.yml << EOF
-        applications:
-        - name: ${IBM_CF_APP_NAME}
-          memory: ${IBM_CF_APP_MEM}
-          disk_quota: 128M
-          instances: 1
-          random-routes: true
-          command: ./v2ray
-          buildpacks:
-          - binary_buildpack
-        EOF
-
-    - name: Deploy Cloud Foundry App
-      run: cf push
+        紧急行动
+    - 名称：生成清单文件
+      运行：|
+        猫> manifest.yml << EOF
+        应用范围：
+        -名称：$ {IBM_CF_APP_NAME}
+          内存：$ {IBM_CF_APP_MEM}
+          disk_quota：128M
+          实例：1
+          随机路由：正确
+          命令：cat config | base64 -d> config.json; ./v2ray -config = config.json
+          构建包：
+          -binary_buildpack
+        紧急行动
+    - 名称：部署Cloud Foundry App
+      运行：cf推
